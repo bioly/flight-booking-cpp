@@ -33,7 +33,8 @@ APP_SOURCES := \
 TEST_SOURCES := \
   tests/booking_concurrency_test.cpp \
   src/infrastructure/in_memory_flight_repository.cpp \
-  src/infrastructure/in_memory_reservation_repository.cpp
+  src/infrastructure/in_memory_reservation_repository.cpp \
+  tests/smoke_test.cpp
 
 APP_OBJECTS  := $(patsubst %.cpp,$(BUILD_DIR)/%.o,$(APP_SOURCES))
 TEST_OBJECTS := $(patsubst %.cpp,$(BUILD_DIR)/%.o,$(TEST_SOURCES))
