@@ -4,18 +4,26 @@
     {
       "name": "macOS-clang",
       "compilerPath": "/usr/bin/clang++",
-      "cStandard": "c17",
       "cppStandard": "c++20",
+      "cStandard": "c17",
       "intelliSenseMode": "macos-clang-x64",
+
       "includePath": [
         "${workspaceFolder}/include",
-        "${workspaceFolder}/build/_deps/googletest/src/googletest/include"
+        "${workspaceFolder}/src",
+        "${workspaceFolder}/tests",
+
+        // GoogleTest (fetched by make)
+        "${workspaceFolder}/build/_deps/googletest/src/googletest/include",
+        "${workspaceFolder}/build/_deps/googletest/src/googlemock/include"
       ],
+
       "browse": {
         "path": [
           "${workspaceFolder}/include",
           "${workspaceFolder}/src",
-          "${workspaceFolder}/tests"
+          "${workspaceFolder}/tests",
+          "${workspaceFolder}/build/_deps/googletest/src"
         ]
       }
     }
