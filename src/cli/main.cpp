@@ -6,7 +6,9 @@
 #include "flight/infrastructure/in_memory_flight_repository.hpp"
 #include "flight/infrastructure/in_memory_reservation_repository.hpp"
 #include "flight/infrastructure/system_clock.hpp"
+#include "flight/infrastructure/flight_repository_factory.hpp"
 
+#include <memory>
 #include <chrono>
 #include <iomanip>
 #include <iostream>
@@ -30,13 +32,26 @@ std::string format_time(std::chrono::system_clock::time_point tp) {
 
 } // namespace
 
-int main() {
+static std::string parse_flight_repo_arg(int argc, char** argv) {
+  std::string repo = "inmem";
+  for (int i = 1; i < argc; ++i) {
+    const std::string arg = argv[i];
+    const std::string prefix = "--flight-repo=";
+    if (arg.rfind(prefix, 0) == 0) repo = arg.substr(prefix.size());
+  }
+  return repo;
+}
+
+int main(int argc, char** argv) {
   using namespace flight;
 
   infrastructure::AtomicIdGenerator ids;
   infrastructure::SystemClock clock;
-  infrastructure::InMemoryFlightRepository flights;
   infrastructure::InMemoryReservationRepository reservations;
+
+  const auto repo_type = infrastructure::parse_flight_repo_type(parse_flight_repo_arg(argc, argv));
+  auto flights_ptr = infrastructure::make_flight_repository(repo_type);
+  auto& flights = *flights_ptr;
 
   // Seed a few flights.
   const auto now = std::chrono::system_clock::now();
@@ -74,7 +89,9 @@ int main() {
       std::cin >> to;
 
       application::FlightSearchCriteria c{domain::AirportCode(from), domain::AirportCode(to)};
+      std::cout << "Searching for flights from " << c.origin.value() << " to " << c.destination.value() << "...\n";
       const auto results = search.search(c);
+      std::cout << "Search completed.\n";
 
       if (results.empty()) {
         std::cout << "No flights found.\n\n";

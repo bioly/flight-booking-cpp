@@ -13,7 +13,7 @@ BIN_DIR   := bin
 
 CXXFLAGS ?= -std=c++20 -Wall -Wextra -Wpedantic -Werror -O2 -g -MMD -MP
 CPPFLAGS += -Iinclude
-LDFLAGS  += -pthread
+LDFLAGS  += -pthread -lsqlite3
 
 # -------------------------
 # GoogleTest (fetched via git; built via CMake)
@@ -44,20 +44,25 @@ DOMAIN_SOURCES := \
 
 INFRA_SOURCES := \
   src/infrastructure/in_memory_flight_repository.cpp \
-  src/infrastructure/in_memory_reservation_repository.cpp
+  src/infrastructure/in_memory_reservation_repository.cpp \
+  src/infrastructure/sqlite_flight_repository.cpp \
+  src/infrastructure/flight_repository_factory.cpp
 
 # If you don't have application/utils sources yet, leave them empty.
 # Archives will still be created as valid empty .a files.
 APPLICATION_SOURCES := src/application/application.cpp
 
-UTILS_SOURCES := src/util/strong_id.cpp
+# UTILS_SOURCES := src/util/strong_id.cpp
+UTILS_SOURCES :=
 
 CLI_SOURCES := \
   src/cli/main.cpp
 
 TEST_SOURCES := \
   tests/booking_concurrency_test.cpp \
-  tests/smoke_test.cpp
+  tests/smoke_test.cpp \
+  tests/sqlite_smoke_test.cpp \
+  tests/sqlite_flight_repository_regression_test.cpp
 
 # -------------------------
 # Objects
@@ -72,6 +77,19 @@ TEST_OBJECTS := $(patsubst %.cpp,$(OBJ_DIR)/%.o,$(TEST_SOURCES))
 
 APP_BIN  := $(BIN_DIR)/flight_cli
 TEST_BIN := $(BIN_DIR)/flight_tests
+
+OPTIONAL_LIBS :=
+OPTIONAL_LDLIBS :=
+
+ifneq ($(strip $(APPLICATION_OBJECTS)),)
+  OPTIONAL_LIBS += $(APPLICATION_LIB)
+  OPTIONAL_LDLIBS += -lflight_application
+endif
+
+ifneq ($(strip $(UTILS_OBJECTS)),)
+  OPTIONAL_LIBS += $(UTILS_LIB)
+  OPTIONAL_LDLIBS += -lflight_utils
+endif
 
 # -------------------------
 # Phony targets
@@ -119,7 +137,7 @@ $(TEST_OBJECTS): $(GTEST_LIB)
 # -------------------------
 # Build static libraries with ar rcs
 # -------------------------
-libs: $(DOMAIN_LIB) $(APPLICATION_LIB) $(INFRA_LIB) $(UTILS_LIB)
+libs: $(DOMAIN_LIB) $(INFRA_LIB) $(OPTIONAL_LIBS)
 
 # Domain library
 $(DOMAIN_LIB): $(DOMAIN_OBJECTS) | $(LIB_DIR)
@@ -143,17 +161,17 @@ $(UTILS_LIB): $(UTILS_OBJECTS) | $(LIB_DIR)
 # -------------------------
 $(APP_BIN): $(CLI_OBJECTS) libs | $(BIN_DIR)
 	$(CXX) $(CLI_OBJECTS) -L$(LIB_DIR) \
-	  -lflight_application -lflight_infrastructure -lflight_domain -lflight_utils \
-	  -o $@ $(LDFLAGS)
+  	$(OPTIONAL_LDLIBS) -lflight_infrastructure -lflight_domain \
+  	-o $@ $(LDFLAGS)
 
 # -------------------------
 # Link tests against libraries + GoogleTest
 # -------------------------
 $(TEST_BIN): $(TEST_OBJECTS) libs $(GTEST_MAIN_LIB) $(GTEST_LIB) | $(BIN_DIR)
 	$(CXX) $(TEST_OBJECTS) -L$(LIB_DIR) \
-	  -lflight_application -lflight_infrastructure -lflight_domain -lflight_utils \
-	  $(GTEST_MAIN_LIB) $(GTEST_LIB) \
-	  -o $@ $(LDFLAGS)
+  	$(OPTIONAL_LDLIBS) -lflight_infrastructure -lflight_domain \
+  	$(GTEST_MAIN_LIB) $(GTEST_LIB) \
+  	-o $@ $(LDFLAGS)
 
 # -------------------------
 # Fetch + build GoogleTest
